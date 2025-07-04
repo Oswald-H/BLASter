@@ -1,0 +1,9 @@
+[build-system]
+requires = [
+    "setuptools>=61",
+    "wheel",
+    "Cython",
+    "numpy",
+    "cysignals",
+]
+build-backend = "setuptools.build_meta"
