@@ -1,10 +1,9 @@
 from pathlib import Path
 from sys import platform
-from setuptools import Extension, setup
+from setuptools import Extension, setup, find_packages
 from Cython.Build import cythonize
 import numpy as np
 import sys
-
 
 def find_eigen():
     for f in [Path('eigen3'),
@@ -17,12 +16,7 @@ def find_eigen():
     exit(1)
 
 
-def get_openmp_flag():
-    return '/openmp' if platform.startswith("win") else '-fopenmp'
-
-
-include_dirs = [np.get_include(), find_eigen()]
-openmp_arg = get_openmp_flag()
+openmp_arg = '/openmp' if sys.platform.startswith("win") else '-fopenmp'
 
 compile_args = [
     '--std=c++17',
@@ -55,7 +49,7 @@ extensions = [
     Extension(
         name="blaster_core",
         sources=["core/blaster.pyx"],
-        include_dirs=include_dirs,
+        include_dirs=[np.get_include(), find_eigen()],
         extra_compile_args=compile_args,
         extra_link_args=link_args,
         language="c++",
@@ -63,6 +57,9 @@ extensions = [
 ]
 
 setup(
+    name="blaster",
+    package_dir={'': 'src'},
+    packages=find_packages(where='src'),
     ext_modules=cythonize(
         extensions,
         compiler_directives={"language_level": "3"},

@@ -42,6 +42,17 @@ Optional:
 - Optional: Run `make venv` to create a local virtual environment and install the required python3 modules.
 - Run `make` to compile all the Cython files in `core/`.
 
+## Install
+
+- After building, install the Eigen3 library. You can build the package with `python setup.py build`.
+- To install the Python package, run `pip install .` in the project directory.
+- Example Usage:
+    ```python
+    import blaster
+
+    blaster.reduce()
+    ```
+
 ## Debugging
 
 - Debug the C++/Cython code with the `libasan` and `libubsan` sanitizers by running `make cython-gdb`.
