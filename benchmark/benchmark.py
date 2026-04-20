@@ -4,9 +4,9 @@ import subprocess
 import sys
 
 from flatter_conversion import convert_logfiles
-from blaster.IO import read_qary_lattice
-from blaster.stats import get_profile, rhf, slope
 
+from blaster.lattice_io import read_qary_lattice
+from blaster.stats import get_profile, rhf, slope
 
 # Specify which lattices we want to test:
 mqs = [
@@ -18,13 +18,13 @@ mqs = [
 seeds = range(10)
 cmd_blaster = "../python3 ../src/app.py -q"
 temp_lat = "../output/temp.lat"
-other_logs = {m: open(f'./logs_other_{m}.csv', mode='w', encoding='utf8') for (m, q) in mqs}
+other_logs = {m: open(f"./logs_other_{m}.csv", mode="w", encoding="utf8") for (m, q) in mqs}
 
 
 def is_float(x):
     try:
         x = float(x)
-    except:
+    except (TypeError, ValueError):
         return False
     return True
 
@@ -33,16 +33,13 @@ def parse_time_usage(time_output):
     times = time_output.strip().split(" ")
     # parts = time_output.split("\n")[1:4]
     # times = [part.split("\t")[1] for part in parts]
-    return {'real': times[0], 'user': times[1], 'sys': times[2]}
+    return {"real": times[0], "user": times[1], "sys": times[2]}
 
 
 def run_command(cmd, logfile=None, capture_time=False, flatter_fail=False):
-    print(f"Executing \"{cmd}\".", flush=True)
+    print(f'Executing "{cmd}".', flush=True)
     if capture_time:
-        result = subprocess.run(
-            f"/usr/bin/time -f \"%e %U %S\" {cmd}",
-            text=True, shell=True, capture_output=True
-        )
+        result = subprocess.run(f'/usr/bin/time -f "%e %U %S" {cmd}', text=True, shell=True, capture_output=True)
     else:
         result = subprocess.run(cmd, shell=True)
     if not flatter_fail and result.returncode != 0:
@@ -58,7 +55,7 @@ def run_command(cmd, logfile=None, capture_time=False, flatter_fail=False):
 
 
 def gen_lattice(m, q, seed, path):
-    n = m//2
+    n = m // 2
     run_command(f"latticegen -randseed {seed} q {m} {n} {q} q > {path}")
 
 
@@ -94,11 +91,8 @@ def run_fplll(m, q, seed, path):
     cmd = f"fplll {path} > {temp_lat}"
     t = run_command(cmd, capture_time=True)
     prof = get_profile(read_qary_lattice(temp_lat))
-    data = {
-        'seed': seed, 'type': "fpLLL",
-        'slope': f"{slope(prof):.6f}", 'rhf': f"{rhf(prof):.5f}"
-    }
-    print(','.join(str(v) for k, v in (data | t).items()), file=other_logs[m], flush=True)
+    data = {"seed": seed, "type": "fpLLL", "slope": f"{slope(prof):.6f}", "rhf": f"{rhf(prof):.5f}"}
+    print(",".join(str(v) for k, v in (data | t).items()), file=other_logs[m], flush=True)
     other_logs[m].flush()
 
 
@@ -107,10 +101,12 @@ def run_KEF21(m, q, seed, path, num_threads):
     t = run_command(cmd, capture_time=True)
     prof = get_profile(read_qary_lattice(temp_lat))
     data = {
-        'seed': seed, 'type': f"KEF21 ({num_threads} threads)",
-        'slope': f"{slope(prof):.6f}", 'rhf': f"{rhf(prof):.5f}"
+        "seed": seed,
+        "type": f"KEF21 ({num_threads} threads)",
+        "slope": f"{slope(prof):.6f}",
+        "rhf": f"{rhf(prof):.5f}",
     }
-    print(','.join(str(v) for k, v in (data | t).items()), file=other_logs[m], flush=True)
+    print(",".join(str(v) for k, v in (data | t).items()), file=other_logs[m], flush=True)
 
 
 def __main__():
@@ -122,7 +118,7 @@ def __main__():
     has_cmd = False
     for i, arg in enumerate(sys.argv[1:]):
         is_cmd = True
-        if arg == 'dim':
+        if arg == "dim":
             assert 2 + i < len(sys.argv), "dim param expected!"
             dim = int(sys.argv[2 + i])
             assert dim in [m for (m, q) in mqs], "Unknown dimension"
@@ -130,23 +126,23 @@ def __main__():
             assert len(curq) == 1
             curq = curq[0]
             lattices = [(dim, curq, seed, f"../input/{dim}_{curq}_{seed}") for seed in seeds]
-        elif arg == 'lattices':
+        elif arg == "lattices":
             for lat in lattices:
                 gen_lattice(*lat)
-        elif arg == 'lll':
+        elif arg == "lll":
             for lat in lattices:
                 run_blaster(*lat)
-        elif arg == 'deeplll':
+        elif arg == "deeplll":
             assert 2 + i < len(sys.argv), "depth param expected!"
             depth = int(sys.argv[2 + i])
             for lat in lattices:
                 run_blaster_deeplll(*lat, depth)
-        elif arg == 'pbkz':
+        elif arg == "pbkz":
             assert 2 + i < len(sys.argv), "beta param expected!"
             beta = int(sys.argv[2 + i])
             for lat in lattices:
                 run_blaster_bkz(*lat, beta)
-        elif arg == 'flatter':
+        elif arg == "flatter":
             assert 2 + i < len(sys.argv), "num_threads param expected!"
             num_threads = int(sys.argv[2 + i])
             alpha = None
@@ -154,10 +150,10 @@ def __main__():
                 alpha = float(sys.argv[3 + i])
             for lat in lattices:
                 run_flatter(*lat, num_threads, alpha)
-        elif arg == 'fplll':
+        elif arg == "fplll":
             for lat in lattices:
                 run_fplll(*lat)
-        elif arg == 'KEF21':
+        elif arg == "KEF21":
             assert 2 + i < len(sys.argv), "num_threads param expected!"
             num_threads = int(sys.argv[2 + i])
             for lat in lattices:
@@ -170,8 +166,7 @@ def __main__():
         f.close()
 
     if not has_cmd:
-        print(f"Usage: {sys.argv[0]} [dim d|lattices|lll|deeplll `depth`|"
-              f"pbkz `beta`|flatter `num_threads`]")
+        print(f"Usage: {sys.argv[0]} [dim d|lattices|lll|deeplll `depth`|pbkz `beta`|flatter `num_threads`]")
 
 
 if __name__ == "__main__":

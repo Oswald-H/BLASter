@@ -1,32 +1,29 @@
-# Python cache
-__pycache__
-*.egg-info
+# Python
+__pycache__/
+*.egg-info/
+src/blaster.egg-info/
+src/blaster/__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+uv.lock
 
-# Shared libraries
+# Compiled / native libs
 *.so
+*.pyd
+.clang*
+
+# Build
+/build
+/dist
+
+# Local development environment
+.venv
+tests
 
 # Swap files
 *.swp
 
-# Input/output lattice bases
-/input/
-/output/
-
-# Cython related files
-/build/
-
-# Local eigen files
-/eigen*
-
-# Local venv
-/activate
-/python3
-/venv/
-
-# cysignals creates this directory when Ctrl+C'ing during execution
-cysignals_crash_logs/
-
-# Benchmarks generate big logs
-/logs/
-/logs-flatter/
-/benchmark/results/
+# Editor
+.vscode/
+.DS_Store

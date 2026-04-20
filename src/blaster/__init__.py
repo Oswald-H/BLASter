@@ -1,7 +1,14 @@
 __all__ = [
-    'TimeProfile', 'lll_reduce', 'bkz_reduce', 'reduce',  # blaster.py
-    'IO', 'size_reduction', 'stats', '_core',  # other .py files
+    # blaster.py
+    "reduce",
+    "TimeProfile",
+    "lll_reduce",
+    "bkz_reduce",
+    # other modules
+    "stats",
+    "lattice_io",
+    "size_reduction",
 ]
 
-from . import lattice_io as IO, size_reduction, stats, _core
-from .blaster import TimeProfile, lll_reduce, bkz_reduce, reduce
+from . import lattice_io, size_reduction, stats
+from .blaster import TimeProfile, bkz_reduce, lll_reduce, reduce

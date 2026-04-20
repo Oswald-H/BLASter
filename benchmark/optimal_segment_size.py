@@ -11,7 +11,7 @@ mqs = [
 ]
 seeds = range(10)
 cmd_blaster = "../python3 ../src/app.py -q"
-error_file = open("results/optimal_segment_size-errors.txt", "a", encoding='utf8')
+error_file = open("results/optimal_segment_size-errors.txt", "a", encoding="utf8")
 
 
 def parse_time_usage(time_output):
@@ -28,8 +28,14 @@ def time_run_and_timeout(cmd):
 
     # The os.setsid() is passed in the argument preexec_fn so
     # it's run after the fork() and before  exec() to run the shell.
-    with subprocess.Popen(cmd, text=True, shell=True, preexec_fn=os.setsid,
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+    with subprocess.Popen(
+        cmd,
+        text=True,
+        shell=True,
+        preexec_fn=os.setsid,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
         try:
             stdout, stderr = process.communicate(None, timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -51,16 +57,16 @@ def time_run_and_timeout(cmd):
 
 
 def run_command(cmd):
-    cmd = f"/usr/bin/time -f \"%e %U %S\" {cmd}"
+    cmd = f'/usr/bin/time -f "%e %U %S" {cmd}'
     try:
         result = time_run_and_timeout(cmd)
     except subprocess.TimeoutExpired as exc:
-        print(f"Timeout expired for command \"{cmd}\"", file=error_file)
+        print(f'Timeout expired for command "{cmd}"', file=error_file)
         if exc.stderr is not None:
             print(exc.stderr.decode("utf-8"), file=error_file, flush=True)
         return None
     if result.returncode != 0:
-        print(f"Non zero return code encountered for command \"{cmd}\"", file=error_file)
+        print(f'Non zero return code encountered for command "{cmd}"', file=error_file)
         print(result.stderr, file=error_file, flush=True)
         return None
 
@@ -82,7 +88,7 @@ def run_blaster_deeplll(m, q, seed, LLLsize, depth):
 def __main__():
     # Print CSV header
     print("m,q,LLLsize,seed,real,user,sys", flush=True)
-    for (m, q) in mqs:
+    for m, q in mqs:
         for LLLsize in range(32, 130, 2):
             if (
                 m < 512
@@ -95,8 +101,10 @@ def __main__():
             for seed in range(10):
                 res = run_blaster(m, q, seed, LLLsize)
                 if res:
-                    print(f"{m:4d},{q:9d},{LLLsize},{seed:1d},"
-                          f"{res[0]:6.2f},{res[1]:6.2f},{res[2]:6.2f}", flush=True)
+                    print(
+                        f"{m:4d},{q:9d},{LLLsize},{seed:1d},{res[0]:6.2f},{res[1]:6.2f},{res[2]:6.2f}",
+                        flush=True,
+                    )
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 """
 Utility functions for computing the basis profile of a given basis, and measuring its quality.
 """
+
 from math import exp, gamma, log2, pi
+
 import numpy as np
 
 
@@ -12,7 +14,7 @@ def get_profile(basis, is_upper=False):
     :param basis: basis for a lattice
     :param is_upper: whether `basis` is already an upper triangular matrix or not
     """
-    upper = basis if is_upper else np.linalg.qr(basis, mode='r')
+    upper = basis if is_upper else np.linalg.qr(basis, mode="r")
     return [log2(abs(d_i)) for d_i in upper.diagonal()]
 
 
@@ -24,8 +26,8 @@ def gh(dim):
     :return: GH(dim)
     """
     if dim >= 100:
-        return float(dim / (2*pi*exp(1)))**0.5
-    return float(gamma(1.0 + 0.5 * dim)**(1.0 / dim) / pi**0.5)
+        return float(dim / (2 * pi * exp(1))) ** 0.5
+    return float(gamma(1.0 + 0.5 * dim) ** (1.0 / dim) / pi**0.5)
 
 
 def gaussian_heuristic(profile):
@@ -33,7 +35,7 @@ def gaussian_heuristic(profile):
     Return the Gaussian Heuristic for a particular basis profile.
     """
     n = len(profile)
-    return gh(n) * 2.0**(sum(profile) / n)
+    return gh(n) * 2.0 ** (sum(profile) / n)
 
 
 def rhf(profile):
@@ -42,7 +44,7 @@ def rhf(profile):
         rhf(B) = (||b_0|| / det(B)^{1/n})^{1/n}.
     """
     n = len(profile)
-    return 2.0**((profile[0] - sum(profile) / n) / n)
+    return 2.0 ** ((profile[0] - sum(profile) / n) / n)
 
 
 def slope(profile):
@@ -52,7 +54,7 @@ def slope(profile):
     n = len(profile)
     i_mean = (n - 1) * 0.5
     v1 = sum(profile[i] * (i - i_mean) for i in range(n))
-    v2 = sum((i - i_mean)**2 for i in range(n))
+    v2 = sum((i - i_mean) ** 2 for i in range(n))
     return v1 / v2
 
 

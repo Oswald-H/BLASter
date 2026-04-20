@@ -2,19 +2,24 @@
 BLASter lattice reduction: LLL with QR decomposition, Seysen's reduction, and
 segments, in which lattice reduction is done in parallel.
 """
+
 from functools import partial
 from sys import stderr
 from time import perf_counter_ns
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import ArtistAnimation, PillowWriter
 
 # Local imports
-from ._core import set_debug_flag, set_num_cores, block_lll, block_deep_lll, block_bkz, \
-    ZZ_right_matmul
-from .size_reduction import is_lll_reduced, is_weakly_lll_reduced, size_reduce, seysen_reduce
-from .stats import get_profile, rhf, slope, potential
+from ._core import (
+    ZZ_right_matmul,
+    block_bkz,
+    block_deep_lll,
+    block_lll,
+    set_debug_flag,
+    set_num_cores,
+)
+from .size_reduction import is_lll_reduced, is_weakly_lll_reduced, seysen_reduce, size_reduce
+from .stats import get_profile, potential, rhf, slope
 
 
 class TimeProfile:
@@ -24,25 +29,26 @@ class TimeProfile:
 
     def __init__(self, use_seysen: bool = False):
         self._strs = [
-            "QR-decomp.", "LLL-red.", "BKZ-red.",
-            "Seysen-red." if use_seysen else "Size-red.", "Matrix-mul."
+            "QR-decomp.",
+            "LLL-red.",
+            "BKZ-red.",
+            "Seysen-red." if use_seysen else "Size-red.",
+            "Matrix-mul.",
         ]
         self.num_iterations = 0
         self.times = [0] * 5
 
     def tick(self, *times):
         self.num_iterations += 1
-        self.times = [x + y for x, y in zip(self.times, times)]
+        self.times = [x + y for x, y in zip(self.times, times, strict=True)]
 
     def __str__(self):
-        return (
-            f"Iterations: {self.num_iterations}\n" +
-            "\n".join(f"t_{{{s:11}}}={t/10**9:10.3f}s" for s, t in zip(self._strs, self.times) if t)
+        return f"Iterations: {self.num_iterations}\n" + "\n".join(
+            f"t_{{{s:11}}}={t / 10**9:10.3f}s" for s, t in zip(self._strs, self.times, strict=True) if t
         )
 
 
-def lll_reduce(B, U, U_seysen, lll_size, delta, depth,
-               tprof, tracers, debug, use_seysen):
+def lll_reduce(B, U, U_seysen, lll_size, delta, depth, tprof, tracers, debug, use_seysen):
     """
     Perform BLASter's lattice reduction on basis B, and keep track of the transformation in U.
     If `depth` is supplied, use deep insertions up to depth `depth`.
@@ -54,7 +60,7 @@ def lll_reduce(B, U, U_seysen, lll_size, delta, depth,
     while not is_reduced:
         # Step 1: QR-decompose B, and only store the upper-triangular matrix R.
         t1 = perf_counter_ns()
-        R = np.linalg.qr(B, mode='r')
+        R = np.linalg.qr(B, mode="r")
 
         # Step 2: Call LLL concurrently on small blocks.
         t2 = perf_counter_ns()
@@ -70,11 +76,11 @@ def lll_reduce(B, U, U_seysen, lll_size, delta, depth,
         # Step 3: QR-decompose again because LLL "destroys" the QR decomposition.
         # Note: it does not destroy the bxb blocks, but everything above these: yes!
         t3 = perf_counter_ns()
-        R = np.linalg.qr(B, mode='r')
+        R = np.linalg.qr(B, mode="r")
 
         # Step 4: Seysen reduce or size reduce the upper-triangular matrix R.
         t4 = perf_counter_ns()
-        with np.errstate(all='raise'):
+        with np.errstate(all="raise"):
             (seysen_reduce if use_seysen else size_reduce)(R, U_seysen)
 
         # Step 5: Update B and U with transformation from Seysen's reduction.
@@ -95,8 +101,21 @@ def lll_reduce(B, U, U_seysen, lll_size, delta, depth,
             tracer(tprof.num_iterations, prof, note)
 
 
-def bkz_reduce(B, U, U_seysen, lll_size, delta, depth,
-               beta, bkz_tours, bkz_size, tprof, tracers, debug, use_seysen):
+def bkz_reduce(
+    B,
+    U,
+    U_seysen,
+    lll_size,
+    delta,
+    depth,
+    beta,
+    bkz_tours,
+    bkz_size,
+    tprof,
+    tracers,
+    debug,
+    use_seysen,
+):
     """
     Perform BLASter's BKZ reduction on basis B, and keep track of the transformation in U.
     If `depth` is supplied, BLASter's deep-LLL is called in between calls of the SVP oracle.
@@ -110,7 +129,7 @@ def bkz_reduce(B, U, U_seysen, lll_size, delta, depth,
     while tours_done < bkz_tours:
         # Step 1: QR-decompose B, and only store the upper-triangular matrix R.
         t1 = perf_counter_ns()
-        R = np.linalg.qr(B, mode='r')
+        R = np.linalg.qr(B, mode="r")
 
         # Step 2: Call BKZ concurrently on small blocks!
         t2 = perf_counter_ns()
@@ -120,12 +139,12 @@ def bkz_reduce(B, U, U_seysen, lll_size, delta, depth,
         # Step 3: QR-decompose again because BKZ "destroys" the QR decomposition.
         # Note: it does not destroy the bxb blocks, but everything above these: yes!
         t3 = perf_counter_ns()
-        R = np.linalg.qr(B, mode='r')
+        R = np.linalg.qr(B, mode="r")
         # assert abs(R[cur_front, cur_front]) <= norm_before
 
         # Step 4: Seysen reduce or size reduce the upper-triangular matrix R.
         t4 = perf_counter_ns()
-        with np.errstate(all='raise'):
+        with np.errstate(all="raise"):
             (seysen_reduce if use_seysen else size_reduce)(R, U_seysen)
 
         # Step 5: Update B and U with transformation from Seysen's reduction.
@@ -149,16 +168,24 @@ def bkz_reduce(B, U, U_seysen, lll_size, delta, depth,
             cur_front = 0
             tours_done += 1
         else:
-            cur_front += (bkz_size - beta + 1)
+            cur_front += bkz_size - beta + 1
 
         # Perform a final LLL reduction at the end
         lll_reduce(B, U, U_seysen, lll_size, delta, depth, tprof, tracers, debug, use_seysen)
 
 
 def reduce(
-        B, lll_size: int = 64, delta: float = 0.99, cores: int = 1, debug: bool = False,
-        verbose: bool = False, logfile: str = None, anim: str = None, depth: int = 0,
-        use_seysen: bool = False, **kwds
+    B,
+    lll_size: int = 64,
+    delta: float = 0.99,
+    cores: int = 1,
+    debug: bool = False,
+    verbose: bool = False,
+    logfile: str = None,
+    anim: str = None,
+    depth: int = 0,
+    use_seysen: bool = False,
+    **kwds,
 ):
     """
     :param B: a basis, consisting of *column vectors*,
@@ -190,32 +217,40 @@ def reduce(
 
     tracers = {}
     if verbose:
+
         def trace_print(_, prof, note):
-            log_str = '.'
-            if note[0].startswith('BKZ'):
+            log_str = "."
+            if note[0].startswith("BKZ"):
                 beta, tour, ntours, touridx = note[1]
-                log_str = (f"\nBKZ(β:{beta:3d},t:{tour + 1:2d}/{ntours:2d}, o:{touridx:4d}): "
-                           f"slope={slope(prof):.6f}, rhf={rhf(prof):.6f}")
+                log_str = (
+                    f"\nBKZ(β:{beta:3d},t:{tour + 1:2d}/{ntours:2d}, o:{touridx:4d}): "
+                    f"slope={slope(prof):.6f}, rhf={rhf(prof):.6f}"
+                )
             print(log_str, end="", file=stderr, flush=True)
-        tracers['v'] = trace_print
+
+        tracers["v"] = trace_print
 
     # Set up logfile
     has_logfile = logfile is not None
     if has_logfile:
         tstart = perf_counter_ns()
         logfile = open(logfile, "w", encoding="utf8")
-        print('it,walltime,rhf,slope,potential,note', file=logfile, flush=True)
+        print("it,walltime,rhf,slope,potential,note", file=logfile, flush=True)
 
         def trace_logfile(it, prof, note):
             walltime = (perf_counter_ns() - tstart) * 10**-9
-            print(f'{it:4d},{walltime:.6f},{rhf(prof):8.6f},{slope(prof):9.6f},'
-                  f'{potential(prof):9.3f},{note[0]}', file=logfile)
+            print(
+                f"{it:4d},{walltime:.6f},{rhf(prof):8.6f},{slope(prof):9.6f},{potential(prof):9.3f},{note[0]}",
+                file=logfile,
+            )
 
-        tracers['l'] = trace_logfile
+        tracers["l"] = trace_logfile
 
     # Set up animation
     has_animation = anim is not None
     if has_animation:
+        import matplotlib.pyplot as plt
+        from matplotlib.animation import ArtistAnimation, PillowWriter
         fig, ax = plt.subplots()
         ax.set(xlim=[0, n])
         artists = []
@@ -223,7 +258,7 @@ def reduce(
         def trace_anim(_, prof, __):
             artists.append(ax.plot(range(n), prof, color="blue"))
 
-        tracers['a'] = trace_anim
+        tracers["a"] = trace_anim
 
     B = B.copy()  # Do not modify B in-place, but work with a copy.
     U = np.identity(n, dtype=np.int64)
@@ -252,8 +287,21 @@ def reduce(
 
             for beta_ in betas:
                 tours = bkz_tours if beta_ == beta else 1
-                bkz_reduce(B, U, U_seysen, lll_size, delta, depth, beta_, tours, bkz_size,
-                           tprof, tracers, debug, use_seysen)
+                bkz_reduce(
+                    B,
+                    U,
+                    U_seysen,
+                    lll_size,
+                    delta,
+                    depth,
+                    beta_,
+                    tours,
+                    bkz_size,
+                    tprof,
+                    tracers,
+                    debug,
+                    use_seysen,
+                )
     except KeyboardInterrupt:
         pass  # When interrupted, give the partially reduced basis.
 
@@ -265,7 +313,7 @@ def reduce(
     if has_animation:
         # Saving the animation takes a LONG time.
         if verbose:
-            print('\nOutputting animation...', file=stderr)
+            print("\nOutputting animation...", file=stderr)
         fig.tight_layout()
         ani = ArtistAnimation(fig=fig, artists=artists, interval=200)
         # Generate 1920x1080 image:

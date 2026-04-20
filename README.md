@@ -1,6 +1,6 @@
 # BLASter
 
-BLASter is a proof of concept of an LLL-like lattice reduction algorithm that uses:
+BLASter is a proof of concept for an LLL-like lattice reduction algorithm that uses:
 
 - parallelization,
 - segmentation,
@@ -9,65 +9,122 @@ BLASter is a proof of concept of an LLL-like lattice reduction algorithm that us
 
 ## Disclaimer
 
-The goal of this software is to showcase speed ups that are possible in lattice reduction software.
+The goal of this software is to showcase speedups that are possible in lattice reduction software.
 This software is a *proof of concept*!
 
 In particular, we **do not**:
 
-- guarantee the algorithm terminates, nor claim its output is correct on all lattices,
+- guarantee that the algorithm terminates or that its output is correct on all lattices,
 - support lattices with large entries,
-- consider issues / PRs that improve efficiency or robustness,
+- consider issues or PRs that improve efficiency or robustness,
 - actively maintain this software.
 
 We **do**:
 
-- happily answer any questions to explain design choices phrased as: *"Why is X done in Y way?"*. The answer may, in many cases, be: "because it is faster in practice".
+- happily answer questions about design choices phrased as: *"Why is X done in Y way?"* In many cases, the answer may be: "because it is faster in practice."
 - encourage the cryptographic community to build a new robust lattice reduction library incorporating the ideas in this proof of concept.
 
 ## Requirements
 
-- python3
-- Cython version 3.0 or later
-- Python modules: `cysignals numpy setuptools matplotlib` (installed system-wide or locally through `make venv`)
-- The [Eigen library](https://libeigen.gitlab.io/) version 3 or later (installed system-wide or locally through `make eigen3`)
+- Python 3.10+, CMake, and a C++17 compiler
+- OpenMP support for the compiler toolchain used to build BLASter
+- The [Eigen library](https://libeigen.gitlab.io/) version 3 or later for source builds
 
 Optional:
 
-- Python module: virtualenv or venv (for creating a local virtual environment to install python3 modules).
-- fplll (for generating q-ary lattices with the `latticegen` command)
+- fplll (for generating q-ary lattices with the `latticegen` command used below)
 
-## Building
+## Installation
 
-One can either build the software locally as follows:
+### 1. Install `uv`
 
-1. (optional) Run `make eigen3` to install the Eigen (version 3.4.0) in a subdirectory.
-2. (optional) Run `make venv` to create a local virtual environment and install the required python3 modules.
-3. Run `make` to compile all the Cython files in `core/`.
+The recommended way to install `uv` is:
 
-Instead of step 2 & 3, running `pip install .` will install the software as the package `blaster` in the used Python environment.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 2. Install into a local project environment
+
+To create a `.venv` in this repository and install BLASter there:
+
+```bash
+uv venv
+uv pip install -e .
+```
+
+This installs the `blaster` package from `src/blaster` in editable mode and
+builds the native `_core` extension with `scikit-build-core`, `CMake`, and
+`nanobind`.
+
+Current source builds require `Eigen3` and an OpenMP-capable
+toolchain.
+
+### 3. Install into another Python environment
+
+If you want to install BLASter into a Python environment that lives somewhere
+else, point `uv` at that interpreter explicitly:
+
+```bash
+uv pip install --python /path/to/venv/bin/python -e /path/to/BLASter
+```
+
+Replace `/path/to/venv/bin/python` with the target interpreter. If you do
+not want an editable install, drop the `-e` flag.
+
+Plain `pip install .` also works, but the commands above use `uv` throughout.
+
+### 4. Build distribution artifacts or install development tools
+
+To build the source distribution and wheel defined by `pyproject.toml`:
+
+```bash
+uv build
+```
+
+This writes the build artifacts to `dist/`.
+
+If you want the development tools from `[dependency-groups.dev]` in the
+repository environment, use:
+
+```bash
+uv sync --group dev
+```
 
 ## Debugging
 
-- Debug the C++/Cython code with the `libasan` and `libubsan` sanitizers by running `make cython-gdb`.
-    These sanitizers check for memory leaks, out of bounds accesses, and undefined behaviour.
-- When executing the script `src/app.py`, preload libasan as follows:
-    `LD_PRELOAD=$(gcc -print-file-name=libasan.so) ./python3 src/app.py -pvi INPUTFILE`
-- If you want to run the program with the `gdb` debugger, read the [Cython documentation](https://cython.readthedocs.io/en/stable/src/userguide/debugging.html#running-the-debugger), for more info.
+BLASter's native extension is built through `scikit-build-core`, so native
+debug builds should use the same editable-install path as normal builds:
+
+```bash
+uv pip install --config-setting=cmake.build-type=Debug -e .
+```
 
 ## Running
 
-*Note: you first need to build the software, see [above](#Building).*
+*Note: first install or build the software; see [Installation](#installation).*
 
-You can run the software from the command line by executing the script `src/app.py`.
-For example, `./python3 src/app.py -pvi INPUTFILE` LLL-reduces a lattice in file `INPUTFILE` and outputs it to standard output, and provides additional information to standard error.
+After installation, run the CLI via the `blaster` console script exposed by
+`pyproject.toml`. For example, `blaster -pvi INPUTFILE` LLL-reduces a lattice
+in `INPUTFILE`, writes the reduced basis to standard output, and emits
+additional information to standard error.
 
-To use the software from within your own Python code, call the function `reduce` in the file `src/blaster.py`.
+To use the software from within your own Python code, import the `reduce`
+function from the `blaster` package:
+
+```python
+from blaster import reduce
+```
 
 ### Input file format
-The lattice input format is the same as what is supported by [NTL](https://github.com/libntl/ntl), [FPLLL](https://github.com/fplll/fplll) and [flatter](https://github.com/keeganryan/flatter).
-That is, to specify a rank-`k` lattice in `n`-dimensional Euclidean space, the file or input should be of the form:
 
-```
+The lattice input format of the **BLASter CLI** is the same as the format
+supported by [NTL](https://github.com/libntl/ntl),
+[FPLLL](https://github.com/fplll/fplll), and
+[flatter](https://github.com/keeganryan/flatter). That is, to specify a
+rank-`k` lattice in `n`-dimensional Euclidean space, the input should have the following form:
+
+```latex
 [[a_11 a_12 ... a_1n]
 [a_21 a_22 ... a_2n]
 ...
@@ -76,18 +133,21 @@ That is, to specify a rank-`k` lattice in `n`-dimensional Euclidean space, the f
 
 Notes:
 
-- the final closing `]` may be put on a new line,
-- the input parser is insensitive to extra whitespace in almost all cases.
+- The final closing `]` may be put on a new line.
+- The input parser is insensitive to extra whitespace in almost all cases.
 
 ## Examples
 
-Run `./python3 src/app.py -h` to see all available command line arguments.
+Run `blaster -h` to see all available command-line arguments.
 
 ### LLL
-To generate one *BLASter* data point in [Figure 3](https://eprint.iacr.org/2025/774.pdf), run the following command, which should give (up to timing differences) the following output.
+
+To generate one *BLASter* data point in
+[Figure 3](https://eprint.iacr.org/2025/774.pdf), run the following command,
+which should produce the following output, up to timing differences.
 
 ```ShellSession
-$ time latticegen -randseed 0 q 128 64 631 q | ./python3 src/app.py -pqv
+$ time latticegen -randseed 0 q 128 64 631 q | blaster -pqv
 E[∥b₁∥] ~ 393.44 < 631 (GH: λ₁ ~ 68.77)
 ........
 Iterations: 8
@@ -98,20 +158,25 @@ t_{Matrix-mul.}=     0.007s
 Profile = [8.56 8.66 8.54 8.40 8.32 8.41 8.35 8.23 8.08 8.11 8.05 8.01 7.88 7.84 7.86 7.74 7.72 7.60 7.59 7.70 7.53 7.49 7.40 7.28 7.08 7.10 7.04 7.03 7.07 6.94 6.96 6.79 6.76 6.74 6.60 6.44 6.31 6.23 6.15 6.26 6.22 6.20 6.08 6.06 6.16 6.01 5.83 5.79 5.69 5.55 5.45 5.34 5.36 5.27 5.16 5.37 5.28 5.09 5.01 5.00 4.95 4.76 4.83 4.70 4.57 4.60 4.39 4.34 4.16 4.08 4.12 3.99 4.01 3.91 3.97 3.82 3.75 3.66 3.57 3.58 3.47 3.44 3.45 3.38 3.26 3.20 3.15 3.20 3.07 3.05 2.89 2.87 2.86 2.89 2.74 2.72 2.52 2.39 2.35 2.28 2.16 2.09 1.97 1.87 2.02 2.01 1.97 1.92 1.78 1.60 1.59 1.60 1.57 1.54 1.61 1.46 1.43 1.47 1.34 1.18 1.13 1.08 1.02 0.87 0.80 0.87 0.84 0.79]
 RHF = 1.02142^n, slope = -0.063828, ∥b_1∥ = 378.7
 
-real	0m0.747s
-user	0m0.501s
-sys	0m0.042s
+real 0m0.747s
+user 0m0.501s
+sys 0m0.042s
 ```
 
-The argument `-p` outputs the basis profile, i.e., the binary logarithm (log\_2) of the norms of the Gram--Schmidt vectors.
-The argument `-q` suppresses outputting the reduced basis to standard output.
-The argument `-v` gives extra information regarding the reduced basis, i.e., root Hermite factor is 1.02142, the slope equals -0.063828, and the first basis vector has norm 378.7.
+The `-p` argument outputs the basis profile, i.e., the binary logarithm
+(log\_2) of the norms of the Gram--Schmidt vectors.
+The `-q` argument suppresses writing the reduced basis to standard output.
+The `-v` argument prints extra information about the reduced basis: the root
+Hermite factor is 1.02142, the slope is -0.063828, and the first basis vector
+has norm 378.7.
 
 ### DeepLLL
-To generate one *BLASterDeepLLL-4* data point in [Figure 6](https://eprint.iacr.org/2025/774.pdf), run:
+
+To generate one *BLASterDeepLLL-4* data point in
+[Figure 6](https://eprint.iacr.org/2025/774.pdf), run:
 
 ```ShellSession
-$ time latticegen -randseed 0 q 1024 512 968665207 q | ./python3 src/app.py -d4 -pqv
+$ time latticegen -randseed 0 q 1024 512 968665207 q | blaster -d4 -pqv
 E[∥b₁∥] ~ 131183490632416.14 >= 968665207 (GH: λ₁ ~ 240990.35)
 .....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
 Iterations: 1045
@@ -122,18 +187,21 @@ t_{Matrix-mul.}=   156.098s
 Profile = [29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.85 29.76 29.78 29.71 29.69 29.69 29.67 29.63 29.57 29.57 29.65 29.55 29.46 29.53 29.38 29.37 29.26 29.22 29.23 29.14 29.14 29.10 28.93 29.01 28.93 28.80 28.83 28.82 28.74 28.67 28.72 28.62 28.55 28.53 28.38 28.41 28.41 28.27 28.30 28.34 28.33 28.23 28.20 28.19 28.14 28.15 28.11 27.96 27.83 27.86 27.88 27.79 27.75 27.69 27.72 27.59 27.58 27.49 27.59 27.49 27.39 27.36 27.28 27.21 27.18 27.12 27.09 27.04 26.91 27.06 26.92 26.98 26.86 26.88 26.87 26.80 26.79 26.78 26.73 26.71 26.58 26.58 26.49 26.48 26.38 26.37 26.33 26.29 26.25 26.24 26.16 26.06 26.07 26.00 26.00 25.86 25.89 25.89 25.78 25.75 25.68 25.62 25.55 25.63 25.59 25.58 25.43 25.48 25.51 25.38 25.26 25.20 25.24 25.26 25.10 25.17 25.05 25.02 24.98 24.95 24.93 24.83 24.82 24.68 24.73 24.58 24.69 24.58 24.54 24.46 24.45 24.38 24.39 24.35 24.27 24.33 24.19 24.25 24.13 24.11 23.97 24.06 24.01 23.96 23.92 23.86 23.84 23.79 23.68 23.73 23.62 23.57 23.55 23.41 23.36 23.37 23.31 23.30 23.31 23.20 23.12 23.09 23.07 22.97 22.90 22.95 22.84 22.92 22.82 22.82 22.80 22.77 22.63 22.57 22.64 22.55 22.61 22.50 22.51 22.39 22.42 22.26 22.27 22.24 22.17 22.10 22.10 22.03 22.06 22.02 21.87 21.79 21.82 21.71 21.68 21.65 21.60 21.57 21.58 21.50 21.52 21.43 21.51 21.41 21.38 21.31 21.33 21.25 21.19 21.09 21.03 20.93 20.97 20.88 20.83 20.86 20.73 20.72 20.71 20.60 20.61 20.62 20.56 20.45 20.50 20.39 20.38 20.26 20.26 20.29 20.19 20.18 20.15 20.16 19.98 20.00 19.90 19.86 19.90 19.84 19.82 19.86 19.71 19.74 19.66 19.58 19.55 19.43 19.44 19.44 19.41 19.26 19.22 19.27 19.29 19.22 19.10 19.09 19.07 18.95 18.87 18.87 18.85 18.90 18.84 18.71 18.65 18.70 18.60 18.62 18.53 18.49 18.46 18.45 18.42 18.30 18.34 18.32 18.15 18.17 18.15 18.05 18.03 17.93 17.89 17.84 17.83 17.83 17.85 17.66 17.80 17.64 17.61 17.52 17.53 17.52 17.41 17.46 17.44 17.35 17.30 17.29 17.20 17.18 17.11 17.01 16.98 16.98 16.98 16.98 16.93 16.84 16.84 16.73 16.57 16.58 16.53 16.41 16.39 16.39 16.36 16.34 16.36 16.20 16.10 16.18 16.12 16.11 16.09 16.00 15.98 16.02 15.95 15.95 15.89 15.83 15.80 15.77 15.63 15.70 15.62 15.50 15.49 15.47 15.35 15.29 15.28 15.14 15.15 15.05 15.00 14.95 14.94 14.89 14.92 14.81 14.81 14.71 14.73 14.63 14.70 14.65 14.67 14.58 14.48 14.52 14.53 14.40 14.34 14.24 14.31 14.30 14.28 14.20 14.14 14.14 14.06 13.94 13.83 13.89 13.77 13.71 13.67 13.71 13.64 13.52 13.53 13.47 13.45 13.44 13.38 13.37 13.36 13.25 13.28 13.25 13.10 13.02 13.03 13.03 12.95 12.94 12.93 12.89 12.84 12.73 12.78 12.66 12.72 12.66 12.67 12.52 12.55 12.45 12.31 12.36 12.30 12.30 12.11 12.14 12.13 12.03 12.01 12.03 12.01 11.95 11.95 11.91 11.74 11.69 11.82 11.72 11.71 11.54 11.58 11.51 11.53 11.46 11.39 11.34 11.30 11.28 11.17 11.15 11.11 11.09 11.00 10.94 10.93 10.87 10.79 10.76 10.75 10.70 10.62 10.63 10.60 10.61 10.55 10.56 10.56 10.39 10.31 10.39 10.34 10.22 10.19 10.10 10.15 10.05 9.91 10.03 9.90 9.89 9.83 9.74 9.71 9.73 9.64 9.58 9.53 9.47 9.51 9.46 9.37 9.35 9.28 9.29 9.27 9.11 9.17 9.16 9.08 9.15 8.96 8.92 8.81 8.88 8.71 8.79 8.78 8.75 8.69 8.51 8.57 8.48 8.46 8.50 8.46 8.42 8.27 8.20 8.17 8.14 8.03 8.08 8.04 7.93 8.01 7.98 7.97 7.92 7.81 7.84 7.75 7.66 7.73 7.56 7.51 7.55 7.41 7.40 7.36 7.27 7.31 7.31 7.33 7.19 7.16 7.06 7.06 6.98 7.05 6.90 6.91 6.83 6.84 6.73 6.73 6.69 6.61 6.57 6.58 6.61 6.49 6.41 6.36 6.28 6.25 6.28 6.28 6.11 6.09 6.06 5.99 5.93 5.81 5.80 5.85 5.87 5.89 5.80 5.70 5.66 5.63 5.61 5.55 5.50 5.50 5.39 5.34 5.29 5.13 5.24 5.20 5.04 5.21 5.05 5.04 5.02 4.95 4.94 4.86 4.78 4.80 4.75 4.67 4.57 4.61 4.56 4.42 4.47 4.43 4.37 4.33 4.24 4.28 4.16 4.20 4.09 4.05 4.04 4.00 4.00 3.93 3.82 3.88 3.87 3.82 3.66 3.55 3.64 3.67 3.52 3.47 3.39 3.45 3.36 3.38 3.25 3.18 3.17 3.16 3.05 2.93 3.08 2.98 2.97 3.01 2.90 2.86 2.67 2.75 2.73 2.67 2.62 2.55 2.57 2.52 2.44 2.40 2.24 2.33 2.33 2.24 2.21 2.13 2.07 2.01 2.01 1.97 1.87 1.97 1.85 1.79 1.80 1.69 1.67 1.61 1.68 1.51 1.56 1.50 1.39 1.35 1.36 1.35 1.32 1.28 1.23 1.25 1.13 1.00 1.00 0.97 0.99 0.93 0.84 0.85 0.84 0.73 0.70 0.59 0.64 0.57 0.59 0.53 0.42 0.43 0.40 0.39 0.36 0.23 0.17 0.13 0.19 0.14 0.05 0.02 -0.00 -0.07 -0.14 -0.16 -0.21 -0.17 -0.27 -0.30 -0.36 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 -0.00 -0.00 0.00 0.00 -0.00 -0.00 -0.00 -0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00]
 RHF = 1.01015^n, slope = -0.036847, ∥b_1∥ = 968665207.0
 
-real	5m47.925s
-user	18m12.336s
-sys	0m23.005s
+real 5m47.925s
+user 18m12.336s
+sys 0m23.005s
 ```
 
 ### (Progressive) BKZ
-To generate one *BLASterBKZ-60* data point in [Figure 3](https://eprint.iacr.org/2025/774.pdf), run the command found below.
-This command runs progressive BKZ (with 4-deep-LLL before SVP calls) with increasing block sizes `40, 42, ..., 60` performing one tour per block size.
-Moreover, `-l` will record intermediate progress in the file `logfile.csv`.
+
+To generate one *BLASterBKZ-60* data point in
+[Figure 3](https://eprint.iacr.org/2025/774.pdf), run the command below.
+This command runs progressive BKZ (with 4-deep-LLL before SVP calls) with
+increasing block sizes `40, 42, ..., 60`, performing one tour per block size.
+The `-l` argument records intermediate progress in `logfile.csv`.
 
 ```ShellSession
-$ time latticegen -randseed 0 q 128 64 631 q | ./python3 src/app.py -b60 -t1 -P2 -l logfile.csv -pqv
+$ time latticegen -randseed 0 q 128 64 631 q | blaster -b60 -t1 -P2 -l logfile.csv -pqv
 E[∥b₁∥] ~ 393.44 < 631 (GH: λ₁ ~ 68.77)
 ........................
 BKZ(β: 40,t: 1/ 1, o:   0): slope=-0.043332, rhf=1.014315.......
@@ -232,7 +300,7 @@ t_{Matrix-mul.}=     0.282s
 Profile = [6.84 6.80 6.79 6.74 6.74 6.73 6.63 6.67 6.56 6.54 6.53 6.53 6.45 6.44 6.38 6.49 6.58 6.57 6.43 6.50 6.43 6.40 6.28 6.29 6.18 6.17 6.01 6.00 5.99 5.93 5.98 5.93 5.84 5.83 5.86 5.81 5.70 5.69 5.59 5.62 5.59 5.47 5.42 5.34 5.35 5.31 5.21 5.18 5.26 5.17 5.04 4.99 5.00 5.02 4.97 4.86 4.86 4.78 4.70 4.76 4.65 4.65 4.58 4.53 4.53 4.42 4.31 4.42 4.30 4.29 4.18 4.33 4.34 4.28 4.29 4.24 4.23 4.22 4.17 4.15 4.12 4.10 4.04 3.99 3.98 3.94 3.87 3.87 3.86 3.83 3.81 3.74 3.71 3.62 3.62 3.49 3.51 3.42 3.51 3.40 3.32 3.34 3.37 3.31 3.23 3.24 3.15 3.12 3.08 3.04 2.89 2.88 2.90 2.80 2.75 2.76 2.79 2.64 2.68 2.65 2.54 2.46 2.41 2.45 2.39 2.38 2.25 2.18]
 RHF = 1.01190^n, slope = -0.036484, ∥b_1∥ = 114.2
 
-real	0m14.563s
-user	0m17.605s
-sys	0m0.045s
+real 0m14.563s
+user 0m17.605s
+sys 0m0.045s
 ```

@@ -4,17 +4,18 @@ Seysen-reducing a basis.
 
 In comments, the old recursive functions are kept for clarity.
 """
+
 from functools import cache
+
 import numpy as np
 
 # Local imports
-from ._core import ZZ_left_matmul_strided, FT_matmul
-
+from ._core import FT_matmul, ZZ_left_matmul_strided
 
 # Reduction properties:
 
 
-def is_weakly_lll_reduced(R, delta=.99):
+def is_weakly_lll_reduced(R, delta=0.99):
     """
     Return whether R is Weakly-LLL-reduced
     :param R: upper-triangular matrix
@@ -26,7 +27,7 @@ def is_weakly_lll_reduced(R, delta=.99):
         # vectors are b0 = (u, 0), b1 = (v, w).
         u = abs(R[pos, pos])
         v, w = R[pos, pos + 1], R[pos + 1, pos + 1]
-        v_mod = ((v + u/2) % u) - u/2
+        v_mod = ((v + u / 2) % u) - u / 2
 
         if v_mod**2 + w**2 <= delta * u**2:
             return False  # ||b1||^2 <= delta ||b0||^2
@@ -39,10 +40,10 @@ def is_size_reduced(R):
     :param R: upper-triangular matrix
     :return: bool
     """
-    return all(max(abs(R[i, i + 1:])) <= abs(R[i, i]) / 2 for i in range(len(R) - 1))
+    return all(max(abs(R[i, i + 1 :])) <= abs(R[i, i]) / 2 for i in range(len(R) - 1))
 
 
-def is_lll_reduced(R, delta=.99):
+def is_lll_reduced(R, delta=0.99):
     """
     Return whether R is LLL-reduced (weakly-LLL & size-reduced)
     :param R: upper-triangular matrix
@@ -90,7 +91,7 @@ def __reduction_ranges(n):
     bit_shift, parts, result, base_cases = 1, 1, [], []
     while parts < n:
         left_bound, left_idx = 0, 0
-        for i in range(1, parts + 1):
+        for _ in range(1, parts + 1):
             right_bound = left_bound + 2 * n
 
             mid_idx = (left_bound + n) >> bit_shift
@@ -114,7 +115,7 @@ def __reduction_ranges(n):
 def __babai_ranges(n):
     # Assume all indices are base cases initially
     range_around = [False] * n
-    for (i, j, k) in __reduction_ranges(n)[1]:
+    for i, j, k in __reduction_ranges(n)[1]:
         # Mark node `j` as responsible to reduce [i, j) wrt [j, k) once Babai is at/past index j.
         range_around[j] = (i, k)
     return range_around
@@ -140,7 +141,7 @@ def nearest_plane(R, T, U):
     n = len(R)
     if n > 1:
         range_around = __babai_ranges(n)
-        for j in range(n-1, 0, -1):
+        for j in range(n - 1, 0, -1):
             # All targets are reduced w.r.t all basis vectors that come *after* j.
             # Compute the reduction coefficient (U_j) w.r.t basis vector j.
             U[j, :] = -np.rint((1.0 / R[j, j]) * T[j, :]).astype(np.int64)
@@ -148,7 +149,7 @@ def nearest_plane(R, T, U):
             T[j, :] += R[j, j] * U[j, :]
 
             if not range_around[j]:
-                T[j-1, :] += R[j-1, j] * U[j, :].astype(np.float64)
+                T[j - 1, :] += R[j - 1, j] * U[j, :].astype(np.float64)
             else:
                 i, k = range_around[j]
                 # Apply reduction of [j:k) on the coefficients T[i:j).
@@ -182,7 +183,7 @@ def size_reduce(R, U):
         U[i, i + 1] = -round(R[i, i + 1] / R[i, i])
         R[i, i + 1] += R[i, i] * U[i, i + 1]
 
-    for (i, j, k) in ranges:
+    for i, j, k in ranges:
         # Size reduce [j, k) with respect to [i, j).
         #
         #     [R11 R12]      [U11 U12]              [S11 S12]
@@ -219,7 +220,7 @@ def seysen_reduce(R, U):
         U[i, i + 1] = -round(R[i, i + 1] / R[i, i])
         R[i, i + 1] += R[i, i] * U[i, i + 1]
 
-    for (i, j, k) in ranges:
+    for i, j, k in ranges:
         # Seysen reduce [j, k) with respect to [i, j).
         #
         #     [R11 R12]      [U11 U12]              [S11 S12]
@@ -233,9 +234,7 @@ def seysen_reduce(R, U):
         R[i:j, j:k] = FT_matmul(R[i:j, j:k], U[j:k, j:k].astype(np.float64))
 
         # U12' = round(-S11^{-1} · S12').
-        U[i:j, j:k] = np.rint(
-            FT_matmul(-np.linalg.inv(R[i:j, i:j]), R[i:j, j:k])
-        ).astype(np.int64)
+        U[i:j, j:k] = np.rint(FT_matmul(-np.linalg.inv(R[i:j, i:j]), R[i:j, j:k])).astype(np.int64)
 
         # S12 = S12' + S11 · U12'.
         R[i:j, j:k] += FT_matmul(R[i:j, i:j], U[i:j, j:k].astype(np.float64))

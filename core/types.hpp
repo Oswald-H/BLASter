@@ -1,8 +1,7 @@
 #ifndef CORE_TYPES_HPP
 #define CORE_TYPES_HPP
 
-
-constexpr int MAX_ENUM_N = 80; // See enumeration.cpp:16
+constexpr int MAX_ENUM_N = 80;  // See enumeration.cpp:16
 
 // floating-point type
 typedef double FT;
@@ -10,5 +9,4 @@ typedef double FT;
 // integer type
 typedef long long ZZ;
 
-
-#endif // CORE_TYPES_HPP
+#endif  // CORE_TYPES_HPP

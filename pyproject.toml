@@ -1,8 +1,43 @@
-[build-system]
-requires = ["setuptools", "cython", "numpy", "cysignals"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "blaster"
 version = "1.0"
-description = "Fast floating point LLL-reduction"
+description = "Fast floating-point LLL-reduction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = ["numpy", "matplotlib"]
+
+[project.scripts]
+blaster = "blaster.cli:__main__"
+
+[dependency-groups]
+dev = [
+    "fpylll",
+    "matplotlib",
+    "nanobind",
+    "pytest",
+    "ruff",
+    "scikit-build-core>=0.12",
+    "scipy",
+]
+
+[build-system]
+requires = ["scikit-build-core>=0.12", "nanobind"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/blaster"]
+
+# === Ruff configs ===
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "auto"
