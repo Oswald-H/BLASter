@@ -123,6 +123,7 @@ def bkz_reduce(
     """
     # BKZ parameters:
     n, tours_done, cur_front = B.shape[1], 0, 0
+    bkz_size = max(bkz_size, beta + 1)  # always make progress
 
     lll_reduce(B, U, U_seysen, lll_size, delta, depth, tprof, tracers, debug, use_seysen)
 

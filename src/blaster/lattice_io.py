@@ -1,7 +1,6 @@
 """
 Read/write a matrix in fplll format, to/from numpy array.
 """
-
 import numpy as np
 
 
@@ -14,25 +13,24 @@ def read_qary_lattice(input_file=None):
     data = []
     if input_file is None:
         data.append(input().strip())
-        while data[-1] != "]" and data[-1][-2] != "]":
+        while data[-1] not in ["", "]"] and data[-1][-2] != ']':
             data.append(input().strip())
     else:
-        with open(input_file, encoding="utf-8") as f:
+        with open(input_file, 'r', encoding='utf-8') as f:
             data.append(f.readline().strip())
-            while data[-1] != "]" and data[-1][-2] != "]":
+            while data[-1] not in ["", "]"] and data[-1][-2] != ']':
                 data.append(f.readline().strip())
 
-    # Strip away starting '[' and ending ']'
-    assert data[0][0] == "[" and data[-1][-1] == "]"
-    data[0] = data[0][1:]
-    if data[-1] == "]":
-        # Flatter and fpLLL output ']' on a separate line instead of '[<data of last row>]]'
-        data.pop()
-    else:
-        data[-1] = data[-1][:-1]
+    assert data[0][0] == '[' and (not data[-1] or data[-1][-1] == "]")
+    if data[0][:2] == "[[":
+        data[0] = data[0][1:]  # Strip away starting '['
+    if data[-1] in ["", "]"]:
+        data.pop()  # Remove the last line (flatter and fpLLL output ']' on a separate line).
+    elif data[-1][-2:] == "]]":
+        data[-1] = data[-1][:-1]  # Strip away ending ']'
 
-    # Convert data to list of integers
-    data = [list(map(int, line[1:-1].strip().split(" "))) for line in data]
+    # Split data on whitespace and parse as integers.
+    data = [list(map(int, line[1:-1].split())) for line in data]
 
     if np.count_nonzero(data[-1]) == 1:
         # The q-ary vectors are at the back, so reverse the basis vectors in place.
@@ -51,11 +49,11 @@ def write_lattice(basis, output_file=None):
     basis = basis.transpose()
 
     if output_file is None:
-        print("[", end="")
-        for i, v in enumerate(basis):
-            print("[" + " ".join(map(str, v)), end="]\n" if i < len(basis) - 1 else "]]\n")
+        print('[', end='')
+        for (i, v) in enumerate(basis):
+            print('[' + ' '.join(map(str, v)), end=']\n' if i < len(basis) - 1 else ']]\n')
     else:
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write("[")
-            for i, v in enumerate(basis):
-                f.write("[" + " ".join(map(str, v)) + ("]\n" if i < len(basis) - 1 else "]]\n"))
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write('[')
+            for (i, v) in enumerate(basis):
+                f.write('[' + ' '.join(map(str, v)) + (']\n' if i < len(basis) - 1 else ']]\n'))
