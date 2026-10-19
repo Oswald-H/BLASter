@@ -1,5 +1,5 @@
 #include <algorithm>  // std::swap, std::fill_n
-#include <cmath>      // llround, sqrt
+#include <cmath>  // llround, sqrt
 
 #include "enumeration.cpp"
 #include "pruning_params.cpp"
@@ -30,7 +30,7 @@ inline void alter_basis(const int N, FT *R, ZZ *U, int i, int j, ZZ number)
     // R_j += number * R_i.
     for (int k = 0; k <= i; k++)
     {
-        RR(k, j) += number * RR(k, i);
+        RR(k, j) += static_cast<FT>(number) * RR(k, i);
     }
 
     // U_i += number * U_i.
@@ -101,7 +101,7 @@ inline void init_U(const int N, ZZ *U)
 /*******************************************************************************
  * LLL reduction
  ******************************************************************************/
-void _lll_reduce(const int N, FT *R, ZZ *U, const FT delta, const int limit_k)
+void lll_reduce_impl(const int N, FT *R, ZZ *U, const FT delta, const int limit_k)
 {
     // Loop invariant: [0, k) is LLL-reduced (size reduced and Lovász' condition holds).
     for (int k = 1; k < limit_k;)
@@ -142,17 +142,17 @@ void _lll_reduce(const int N, FT *R, ZZ *U, const FT delta, const int limit_k)
 void lll_reduce(const int N, FT *R, ZZ *U, const FT delta)
 {
     init_U(N, U);
-    _lll_reduce(N, R, U, delta, N);
+    lll_reduce_impl(N, R, U, delta, N);
 }
 
 /*******************************************************************************
  * LLL reduction with deep insertions
  ******************************************************************************/
-void _deeplll_reduce(const int N, FT *R, ZZ *U, const FT delta, const int depth, const int limit_k)
+void deeplll_reduce_impl(const int N, FT *R, ZZ *U, const FT delta, const int depth, const int limit_k)
 {
     // First run LLL, because this makes deep-LLL faster, see [2].
     // [2] https://doi.org/10.1007/s10623-014-9918-8
-    _lll_reduce(N, R, U, delta, limit_k);
+    lll_reduce_impl(N, R, U, delta, limit_k);
 
     // Loop invariant: [0, k) is depth-deep-LLL-reduced.
     for (int k = 1; k < limit_k;)
@@ -209,7 +209,7 @@ void _deeplll_reduce(const int N, FT *R, ZZ *U, const FT delta, const int depth,
 void deeplll_reduce(const int N, FT *R, ZZ *U, const FT delta, const int depth)
 {
     init_U(N, U);
-    _deeplll_reduce(N, R, U, delta, depth, N);
+    deeplll_reduce_impl(N, R, U, delta, depth, N);
 }
 
 /*******************************************************************************
@@ -318,7 +318,7 @@ void svp(const int N, FT *R, ZZ *U, const FT delta, int i, int w, ZZ *sol)
 
     // [3] Algorithm 1, line 6 or 8
     // DeepLLL-reduce [0, i + w) such that the next enumeration runs on a DeepLLL-reduced basis.
-    _deeplll_reduce(N, R, U, delta, 4, std::min(i + w, N));
+    deeplll_reduce_impl(N, R, U, delta, 4, std::min(i + w, N));
 }
 
 /*

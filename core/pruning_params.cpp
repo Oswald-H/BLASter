@@ -11,13 +11,13 @@
  *  Generated using the script ./find_pruning_params.py.
  *
  */
-const std::vector<FT> pruning_params[MAX_ENUM_N / 2 + 1] =
+inline const std::vector<FT> pruning_params[MAX_ENUM_N / 2 + 1] =
     {
-        {},                                                                                // dummy values
-        {1.0000, 0.0001},                                                                  // BKZ-2, p=1.000000
-        {1.0000, 0.7347, 0.4695, 0.0395},                                                  // BKZ-4, p=0.288170
-        {1.0000, 0.8297, 0.6595, 0.4725, 0.3040, 0.2369},                                  // BKZ-6, p=0.394078
-        {1.0000, 0.9040, 0.8081, 0.6523, 0.4992, 0.3503, 0.2606, 0.2169},                  // BKZ-8, p=0.339650
+        {},  // dummy values
+        {1.0000, 0.0001},  // BKZ-2, p=1.000000
+        {1.0000, 0.7347, 0.4695, 0.0395},  // BKZ-4, p=0.288170
+        {1.0000, 0.8297, 0.6595, 0.4725, 0.3040, 0.2369},  // BKZ-6, p=0.394078
+        {1.0000, 0.9040, 0.8081, 0.6523, 0.4992, 0.3503, 0.2606, 0.2169},  // BKZ-8, p=0.339650
         {1.0000, 1.0000, 0.9966, 0.9966, 0.5197, 0.5197, 0.3264, 0.3264, 0.3190, 0.3190},  // BKZ-10, p=0.250344
         {1.0000, 1.0000, 0.9900, 0.9900, 0.6683, 0.6683, 0.4022, 0.4022, 0.3848, 0.3848, 0.3848,
          0.3848},  // BKZ-12, p=0.250184
@@ -165,7 +165,7 @@ const std::vector<FT> pruning_params[MAX_ENUM_N / 2 + 1] =
          0.3063, 0.3063, 0.3063, 0.3063, 0.3063, 0.3063, 0.3063, 0.3063, 0.3063, 0.3063},  // BKZ-80, p=0.249058
 };
 
-const FT *get_pruning_coefficients(const int block_size)
+inline const FT *get_pruning_coefficients(const int block_size)
 {
     assert(2 <= block_size && block_size <= MAX_ENUM_N);
     return &pruning_params[(block_size + 1) / 2][0];

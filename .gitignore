@@ -6,12 +6,13 @@ src/blaster/__pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-uv.lock
 
 # Compiled / native libs
 *.so
 *.pyd
 .clang*
+!.clangd
+!.clang-format
 
 # Build
 /build
@@ -19,7 +20,7 @@ uv.lock
 
 # Local development environment
 .venv
-tests
+uv.lock
 
 # Swap files
 *.swp

@@ -252,6 +252,7 @@ def reduce(
     if has_animation:
         import matplotlib.pyplot as plt
         from matplotlib.animation import ArtistAnimation, PillowWriter
+
         fig, ax = plt.subplots()
         ax.set(xlim=[0, n])
         artists = []

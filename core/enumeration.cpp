@@ -3,6 +3,7 @@
 
 #include "enumeration.hpp"
 
+#include <cstddef>
 #include <iostream>
 
 /*
@@ -35,7 +36,7 @@ FT enumeration(const int N, const FT *R, const int rowstride, const FT *pruningv
     for (int i = 0; i < N - 1; ++i)
     {
         FT *muTi = &enumobj.muT[i][0];
-        const FT *Ri = R + (i * rowstride);
+        const FT *Ri = R + static_cast<std::ptrdiff_t>(i) * rowstride;
         FT Rii_inv = FT(1.0) / Ri[i];
         for (int j = i + 1; j < N; ++j)
         {
@@ -48,7 +49,8 @@ FT enumeration(const int N, const FT *R, const int rowstride, const FT *pruningv
     for (int i = 0; i < N; ++i)
     {
         // risq[i] = ||bi*||^2
-        enumobj.risq[i] = R[i * rowstride + i] * R[i * rowstride + i];
+        const auto offset = static_cast<std::ptrdiff_t>(i) * rowstride + i;
+        enumobj.risq[i] = R[offset] * R[offset];
     }
 
     // set the pruning vectors
@@ -66,7 +68,7 @@ FT enumeration(const int N, const FT *R, const int rowstride, const FT *pruningv
     }
 
     // set the initial norm bound
-    enumobj._A = enumeration_radius;
+    enumobj.A = enumeration_radius;
 
     // perform enumeration
     enumobj.enumerate_recursive();
@@ -75,9 +77,9 @@ FT enumeration(const int N, const FT *R, const int rowstride, const FT *pruningv
     // if sol is non-zero for these positions then there is an internal error
     for (int i = N; i < MAX_ENUM_N; ++i)
     {
-        if (enumobj._sol[i] != 0)
+        if (enumobj.sol[i] != 0)
         {
-            std::cerr << "[enum]: dim=" << N << ": internal error _sol[" << i << "] != 0." << std::endl;
+            std::cerr << "[enum]: dim=" << N << ": internal error sol[" << i << "] != 0.\n";
             return 0.0;
         }
     }
@@ -85,11 +87,11 @@ FT enumeration(const int N, const FT *R, const int rowstride, const FT *pruningv
     // write enumeration solution to sol
     for (int i = 0; i < N; ++i)
     {
-        sol[i] = enumobj._sol[i];
+        sol[i] = static_cast<ZZ>(enumobj.sol[i]);
     }
 
     // return the squared norm of the solution found
-    return (enumobj._A < enumeration_radius) ? enumobj._A : 0.0;
+    return (enumobj.A < enumeration_radius) ? enumobj.A : 0.0;
 }
 
 #endif  // ENUMLIB_WRAPPER_ENUMERATION_CPP

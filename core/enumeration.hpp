@@ -25,6 +25,7 @@ SOFTWARE.
 #ifndef ENUMLIB_ENUMERATION_HPP
 #define ENUMLIB_ENUMERATION_HPP
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -49,25 +50,25 @@ struct lattice_enum_t
     fltrow_t pr;
 
     /* internals */
-    FT _A;         // overall enumeration bound
-    fltrow_t _AA;  // enumeration pruning bounds
-    introw_t _x, _Dx, _D2x;
-    fltrow_t _sol;  // to pass to fplll
-    fltrow_t _c;
-    introw_t _r;
-    std::array<FT, N + 1> _l;
-    std::array<std::uint64_t, N + 1> _counts;
+    FT A;  // overall enumeration bound
+    fltrow_t AA;  // enumeration pruning bounds
+    introw_t x, Dx, D2x;
+    fltrow_t sol;  // to pass to fplll
+    fltrow_t c;
+    introw_t r;
+    std::array<FT, N + 1> l;
+    std::array<std::uint64_t, N + 1> counts;
 
-    FT _sigT[N][N];
+    FT sigT[N][N];
 
     lattice_enum_t() : muT(), risq(), pr() {}
 
-    inline void _update_AA()
+    inline void update_AA()
     {
         // ensure that the pruning bounds are non-increasing from a basis perspective.
         for (int k = 0; k < N; ++k)
         {
-            _AA[k] = _A * pr[k];
+            AA[k] = A * pr[k];
         }
     }
 
@@ -81,115 +82,115 @@ struct lattice_enum_t
     template <int i>
     inline void enumerate_recur(i_tag<i>)
     {
-        if (_r[i] > _r[i - 1]) _r[i - 1] = _r[i];
-        FT ci = _sigT[i][i];
+        if (r[i] > r[i - 1]) r[i - 1] = r[i];
+        FT ci = sigT[i][i];
         FT yi = round(ci);
-        ZZ xi = (ZZ)(yi);
+        ZZ xi = static_cast<ZZ>(yi);
         yi = ci - yi;
-        FT li = _l[i + 1] + (yi * yi * risq[i]);
+        FT li = l[i + 1] + (yi * yi * risq[i]);
 #ifndef NOCOUNTS
-        ++_counts[i];
+        ++counts[i];
 #endif
 
-        if (li > _AA[i]) return;
+        if (li > AA[i]) return;
 
-        _Dx[i] = _D2x[i] = (((int)(yi >= 0) & 1) << 1) - 1;
-        _c[i] = ci;
-        _x[i] = xi;
-        _l[i] = li;
+        Dx[i] = D2x[i] = (((int)(yi >= 0) & 1) << 1) - 1;
+        c[i] = ci;
+        x[i] = xi;
+        l[i] = li;
 
-        for (int j = _r[i - 1]; j > i - 1; --j) _sigT[i - 1][j - 1] = _sigT[i - 1][j] - _x[j] * muT[i - 1][j];
+        for (int j = r[i - 1]; j > i - 1; --j) sigT[i - 1][j - 1] = sigT[i - 1][j] - x[j] * muT[i - 1][j];
 
         while (true)
         {
             enumerate_recur(i_tag<i - 1>());
 
-            if (_l[i + 1] == 0.0)
+            if (l[i + 1] == 0.0)
             {
-                ++_x[i];
+                ++x[i];
             }
             else
             {
-                _x[i] += _Dx[i];
-                _D2x[i] = -_D2x[i];
-                _Dx[i] = _D2x[i] - _Dx[i];
+                x[i] += Dx[i];
+                D2x[i] = -D2x[i];
+                Dx[i] = D2x[i] - Dx[i];
             }
 
-            _r[i - 1] = i;
-            FT yi2 = _c[i] - _x[i];
-            FT li2 = _l[i + 1] + (yi2 * yi2 * risq[i]);
-            if (li2 > _AA[i]) return;
-            _l[i] = li2;
-            _sigT[i - 1][i - 1] = _sigT[i - 1][i] - _x[i] * muT[i - 1][i];
+            r[i - 1] = i;
+            FT yi2 = c[i] - x[i];
+            FT li2 = l[i + 1] + (yi2 * yi2 * risq[i]);
+            if (li2 > AA[i]) return;
+            l[i] = li2;
+            sigT[i - 1][i - 1] = sigT[i - 1][i] - x[i] * muT[i - 1][i];
         }
     }
 
     inline void enumerate_recur(i_tag<0>)
     {
         static constexpr int i = 0;
-        FT ci = _sigT[i][i];
+        FT ci = sigT[i][i];
         FT yi = round(ci);
-        ZZ xi = (ZZ)(yi);
+        ZZ xi = static_cast<ZZ>(yi);
         yi = ci - yi;
-        FT li = _l[i + 1] + (yi * yi * risq[i]);
+        FT li = l[i + 1] + (yi * yi * risq[i]);
 #ifndef NOCOUNTS
-        ++_counts[i];
+        ++counts[i];
 #endif
 
-        if (li > _AA[i]) return;
+        if (li > AA[i]) return;
 
-        _Dx[i] = _D2x[i] = (((int)(yi >= 0) & 1) << 1) - 1;
-        _c[i] = ci;
-        _x[i] = xi;
-        _l[i] = li;
+        Dx[i] = D2x[i] = (((int)(yi >= 0) & 1) << 1) - 1;
+        c[i] = ci;
+        x[i] = xi;
+        l[i] = li;
 
         while (true)
         {
             enumerate_recur(i_tag<i - 1>());
 
-            if (_l[i + 1] == 0.0)
+            if (l[i + 1] == 0.0)
             {
-                ++_x[i];
+                ++x[i];
             }
             else
             {
-                _x[i] += _Dx[i];
-                _D2x[i] = -_D2x[i];
-                _Dx[i] = _D2x[i] - _Dx[i];
+                x[i] += Dx[i];
+                D2x[i] = -D2x[i];
+                Dx[i] = D2x[i] - Dx[i];
             }
 
-            FT yi2 = _c[i] - _x[i];
-            FT li2 = _l[i + 1] + (yi2 * yi2 * risq[i]);
-            if (li2 > _AA[i]) return;
-            _l[i] = li2;
+            FT yi2 = c[i] - x[i];
+            FT li2 = l[i + 1] + (yi2 * yi2 * risq[i]);
+            if (li2 > AA[i]) return;
+            l[i] = li2;
         }
     }
 
     inline void enumerate_recur(i_tag<-1>)
     {
-        if (_l[0] > _A || _l[0] == 0.0) return;
+        if (l[0] > A || l[0] == 0.0) return;
 
-        for (int j = 0; j < N; ++j) _sol[j] = _x[j];
+        for (int j = 0; j < N; ++j) sol[j] = x[j];
 
-        _A = _l[0];
-        _update_AA();
+        A = l[0];
+        update_AA();
     }
 
     inline void enumerate_recursive()
     {
-        _update_AA();
+        update_AA();
 
-        std::fill(_l.begin(), _l.end(), 0.0);
-        std::fill(_x.begin(), _x.end(), 0);
-        std::fill(_Dx.begin(), _Dx.end(), 0);
-        std::fill(_D2x.begin(), _D2x.end(), -1);
-        std::fill(_c.begin(), _c.end(), 0.0);
+        std::fill(l.begin(), l.end(), 0.0);
+        std::fill(x.begin(), x.end(), 0);
+        std::fill(Dx.begin(), Dx.end(), 0);
+        std::fill(D2x.begin(), D2x.end(), -1);
+        std::fill(c.begin(), c.end(), 0.0);
 
-        std::fill(_r.begin(), _r.end(), N - 1);
-        std::fill_n(&_sigT[0][0], N * N, 0.0);
+        std::fill(r.begin(), r.end(), N - 1);
+        std::fill_n(&sigT[0][0], N * N, 0.0);
 
-        std::fill(_sol.begin(), _sol.end(), 0);
-        std::fill(_counts.begin(), _counts.end(), 0);
+        std::fill(sol.begin(), sol.end(), 0);
+        std::fill(counts.begin(), counts.end(), 0);
 
         enumerate_recur(i_tag<N - 1>());
     }
