@@ -97,7 +97,7 @@ The input format is compatible with NTL, FPLLL, and Flatter:
 
 ## Citation
 
-This fork is based on the BLASter implementation described in the following publication:
+This fork is based on the [BLASter implementation](https://github.com/ludopulles/BLASter) described in the following publication:
 
 > Léo Ducas, Ludo N. Pulles, Marc Stevens. *Towards a Modern LLL Implementation*.
 > In: ASIACRYPT 2025, Part III. LNCS, vol 16247. Springer, December 2025.

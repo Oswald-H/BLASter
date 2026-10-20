@@ -18,6 +18,13 @@ src/blaster/__pycache__/
 /build
 /dist
 
+# Generated lattice data and benchmark output
+/input/
+/output/
+/logs/
+/logs-flatter/
+/benchmark/results/
+
 # Local development environment
 .venv
 uv.lock

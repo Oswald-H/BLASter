@@ -182,8 +182,8 @@ def reduce(
     cores: int = 1,
     debug: bool = False,
     verbose: bool = False,
-    logfile: str = None,
-    anim: str = None,
+    logfile: str | None = None,
+    anim: str | None = None,
     depth: int = 0,
     use_seysen: bool = False,
     **kwds,
@@ -233,29 +233,31 @@ def reduce(
 
     # Set up logfile
     has_logfile = logfile is not None
+    logfile_handle = None
     if has_logfile:
         tstart = perf_counter_ns()
-        logfile = open(logfile, "w", encoding="utf8")
-        print("it,walltime,rhf,slope,potential,note", file=logfile, flush=True)
+        logfile_handle = open(logfile, "w", encoding="utf8")
+        print("it,walltime,rhf,slope,potential,note", file=logfile_handle, flush=True)
 
         def trace_logfile(it, prof, note):
             walltime = (perf_counter_ns() - tstart) * 10**-9
             print(
                 f"{it:4d},{walltime:.6f},{rhf(prof):8.6f},{slope(prof):9.6f},{potential(prof):9.3f},{note[0]}",
-                file=logfile,
+                file=logfile_handle,
             )
 
         tracers["l"] = trace_logfile
 
     # Set up animation
     has_animation = anim is not None
+    fig = None
+    artists = []
     if has_animation:
         import matplotlib.pyplot as plt
         from matplotlib.animation import ArtistAnimation, PillowWriter
 
         fig, ax = plt.subplots()
         ax.set(xlim=[0, n])
-        artists = []
 
         def trace_anim(_, prof, __):
             artists.append(ax.plot(range(n), prof, color="blue"))
@@ -308,14 +310,18 @@ def reduce(
         pass  # When interrupted, give the partially reduced basis.
 
     # Close logfile
-    if has_logfile:
-        logfile.close()
+    if logfile_handle is not None:
+        logfile_handle.close()
 
     # Save and/or show the animation
-    if has_animation:
+    if anim is not None:
         # Saving the animation takes a LONG time.
         if verbose:
             print("\nOutputting animation...", file=stderr)
+        import matplotlib.pyplot as plt
+        from matplotlib.animation import ArtistAnimation, PillowWriter
+
+        assert fig is not None
         fig.tight_layout()
         ani = ArtistAnimation(fig=fig, artists=artists, interval=200)
         # Generate 1920x1080 image:
